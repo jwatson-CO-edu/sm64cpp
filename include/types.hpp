@@ -8,10 +8,19 @@
 // This file contains various data types used in Super Mario 64 that don't yet
 // have an appropriate header.
 
-#include <ultra64.h>
-#include "macros.h"
-#include "config.h"
+// #include <ultra64.h>
+// #include "macros.h"
+// #include "config.h"
 
+/// Standard ///
+#include <memory>
+using std::shared_ptr;
+#include <vector>
+using std::vector;
+
+/// Raylib ///
+#include <raylib.h>
+#include <raymath.h>
 
 
 ////////// BASIC TYPES /////////////////////////////////////////////////////////////////////////////
@@ -34,7 +43,68 @@ typedef double /*-----------*/ f64;
 
 
 
-////////// COMPOUND TYPES //////////////////////////////////////////////////////////////////////////
+////////// GRAPHICS DATA STRUCTURES ////////////////////////////////////////////////////////////////
+
+// 2023-12-29: I do not like the heavily nest node types, compressing to one
+
+///// Forward Declarations /////
+// class GraphNode;
+// typedef shared_ptr<GraphNode> GNPtr;
+class GraphNodeObject;
+typedef shared_ptr<GraphNodeObject> ObjPtr;
+// class ObjectNode;
+// typedef shared_ptr<ObjectNode> ONPtr;
+// class Object;
+// typedef shared_ptr<Object> ObjPtr;
+
+
+class GraphNodeObject { public:
+    // Most basic node of the scene graph with position and orientation
+
+    /// Scene Graph ///
+    ObjPtr /*---*/ prev;
+    ObjPtr /*---*/ next;
+    ObjPtr /*---*/ parent;
+    vector<ObjPtr> children;
+    vector<ObjPtr> collidedObjs;
+
+    /// Node Info ///
+    s16 type; // structure type
+    s16 flags; // hi = drawing layer, lo = rendering modes
+    s8  areaIndex;
+    s8  activeAreaIndex;
+    u32 collidedObjInteractTypes;
+    s16 activeFlags;
+    s16 numCollidedObjs;
+
+    /// Pose Info ///
+    Vector3 angle;
+    Vector3 pos;
+    Vector3 scale;
+    // /*0x38*/ struct AnimInfo animInfo;
+    // /*0x4C*/ struct SpawnInfo *unk4C;
+    // /*0x50*/ Mat4 *throwMatrix; // matrix ptr
+    // /*0x54*/ Vec3f cameraToObject;
+
+    // 2023-12-29: Comment out elements until I find out what they do
+
+    // /*0x1CC*/ const BehaviorScript *curBhvCommand;
+    /*0x1D0*/ u32 bhvStackIndex;
+    /*0x1D4*/ uintptr_t bhvStack[8];
+    /*0x1F4*/ s16 bhvDelayTimer;
+    /*0x1F6*/ s16 respawnInfoType;
+    /*0x1F8*/ f32 hitboxRadius;
+    /*0x1FC*/ f32 hitboxHeight;
+    /*0x200*/ f32 hurtboxRadius;
+    /*0x204*/ f32 hurtboxHeight;
+    /*0x208*/ f32 hitboxDownOffset;
+    // /*0x20C*/ const BehaviorScript *behavior;
+    /*0x210*/ u32 unused2;
+    // /*0x214*/ struct Object *platform;
+    /*0x218*/ void *collisionData;
+    // /*0x21C*/ Mat4 transform;
+
+};
 
 
 // 2023-12-29: Controller will be handled by Raylib
@@ -115,120 +185,122 @@ typedef double /*-----------*/ f64;
 #define ANIM_FLAG_6          (1 << 6) // 0x40
 #define ANIM_FLAG_7          (1 << 7) // 0x80
 
-struct Animation {
-    /*0x00*/ s16 flags;
-    /*0x02*/ s16 animYTransDivisor;
-    /*0x04*/ s16 startFrame;
-    /*0x06*/ s16 loopStart;
-    /*0x08*/ s16 loopEnd;
-    /*0x0A*/ s16 unusedBoneCount;
-    /*0x0C*/ const s16 *values;
-    /*0x10*/ const u16 *index;
-    /*0x14*/ u32 length; // only used with Mario animations to determine how much to load. 0 otherwise.
-};
+// 2023-12-29: Animation will be handled by Raylib
 
-#define ANIMINDEX_NUMPARTS(animindex) (sizeof(animindex) / sizeof(u16) / 6 - 1)
+// struct Animation {
+//     /*0x00*/ s16 flags;
+//     /*0x02*/ s16 animYTransDivisor;
+//     /*0x04*/ s16 startFrame;
+//     /*0x06*/ s16 loopStart;
+//     /*0x08*/ s16 loopEnd;
+//     /*0x0A*/ s16 unusedBoneCount;
+//     /*0x0C*/ const s16 *values;
+//     /*0x10*/ const u16 *index;
+//     /*0x14*/ u32 length; // only used with Mario animations to determine how much to load. 0 otherwise.
+// };
 
-struct GraphNode {
-    /*0x00*/ s16 type; // structure type
-    /*0x02*/ s16 flags; // hi = drawing layer, lo = rendering modes
-    /*0x04*/ struct GraphNode *prev;
-    /*0x08*/ struct GraphNode *next;
-    /*0x0C*/ struct GraphNode *parent;
-    /*0x10*/ struct GraphNode *children;
-};
+// #define ANIMINDEX_NUMPARTS(animindex) (sizeof(animindex) / sizeof(u16) / 6 - 1)
 
-struct AnimInfo {
-    /*0x00 0x38*/ s16 animID;
-    /*0x02 0x3A*/ s16 animYTrans;
-    /*0x04 0x3C*/ struct Animation *curAnim;
-    /*0x08 0x40*/ s16 animFrame;
-    /*0x0A 0x42*/ u16 animTimer;
-    /*0x0C 0x44*/ s32 animFrameAccelAssist;
-    /*0x10 0x48*/ s32 animAccel;
-};
+// struct GraphNode {
+//     /*0x00*/ s16 type; // structure type
+//     /*0x02*/ s16 flags; // hi = drawing layer, lo = rendering modes
+//     /*0x04*/ struct GraphNode *prev;
+//     /*0x08*/ struct GraphNode *next;
+//     /*0x0C*/ struct GraphNode *parent;
+//     /*0x10*/ struct GraphNode *children;
+// };
 
-struct GraphNodeObject {
-    /*0x00*/ struct GraphNode node;
-    /*0x14*/ struct GraphNode *sharedChild;
-    /*0x18*/ s8 areaIndex;
-    /*0x19*/ s8 activeAreaIndex;
-    /*0x1A*/ Vec3s angle;
-    /*0x20*/ Vec3f pos;
-    /*0x2C*/ Vec3f scale;
-    /*0x38*/ struct AnimInfo animInfo;
-    /*0x4C*/ struct SpawnInfo *unk4C;
-    /*0x50*/ Mat4 *throwMatrix; // matrix ptr
-    /*0x54*/ Vec3f cameraToObject;
-};
+// struct AnimInfo {
+//     /*0x00 0x38*/ s16 animID;
+//     /*0x02 0x3A*/ s16 animYTrans;
+//     /*0x04 0x3C*/ struct Animation *curAnim;
+//     /*0x08 0x40*/ s16 animFrame;
+//     /*0x0A 0x42*/ u16 animTimer;
+//     /*0x0C 0x44*/ s32 animFrameAccelAssist;
+//     /*0x10 0x48*/ s32 animAccel;
+// };
 
-struct ObjectNode {
-    struct GraphNodeObject gfx;
-    struct ObjectNode *next;
-    struct ObjectNode *prev;
-};
+// struct GraphNodeObject {
+//     /*0x00*/ struct GraphNode node;
+//     /*0x14*/ struct GraphNode *sharedChild;
+//     /*0x18*/ s8 areaIndex;
+//     /*0x19*/ s8 activeAreaIndex;
+//     /*0x1A*/ Vec3s angle;
+//     /*0x20*/ Vec3f pos;
+//     /*0x2C*/ Vec3f scale;
+//     /*0x38*/ struct AnimInfo animInfo;
+//     /*0x4C*/ struct SpawnInfo *unk4C;
+//     /*0x50*/ Mat4 *throwMatrix; // matrix ptr
+//     /*0x54*/ Vec3f cameraToObject;
+// };
+
+// struct ObjectNode {
+//     struct GraphNodeObject gfx;
+//     struct ObjectNode *next;
+//     struct ObjectNode *prev;
+// };
 
 // NOTE: Since ObjectNode is the first member of Object, it is difficult to determine
 // whether some of these pointers point to ObjectNode or Object.
 
-struct Object {
-    /*0x000*/ struct ObjectNode header;
-    /*0x068*/ struct Object *parentObj;
-    /*0x06C*/ struct Object *prevObj;
-    /*0x070*/ u32 collidedObjInteractTypes;
-    /*0x074*/ s16 activeFlags;
-    /*0x076*/ s16 numCollidedObjs;
-    /*0x078*/ struct Object *collidedObjs[4];
-    /*0x088*/
-    union {
-        // Object fields. See object_fields.h.
-        u32 asU32[0x50];
-        s32 asS32[0x50];
-        s16 asS16[0x50][2];
-        f32 asF32[0x50];
-#if !IS_64_BIT
-        s16 *asS16P[0x50];
-        s32 *asS32P[0x50];
-        struct Animation **asAnims[0x50];
-        struct Waypoint *asWaypoint[0x50];
-        struct ChainSegment *asChainSegment[0x50];
-        struct Object *asObject[0x50];
-        struct Surface *asSurface[0x50];
-        void *asVoidPtr[0x50];
-        const void *asConstVoidPtr[0x50];
-#endif
-    } rawData;
-#if IS_64_BIT
-    union {
-        s16 *asS16P[0x50];
-        s32 *asS32P[0x50];
-        struct Animation **asAnims[0x50];
-        struct Waypoint *asWaypoint[0x50];
-        struct ChainSegment *asChainSegment[0x50];
-        struct Object *asObject[0x50];
-        struct Surface *asSurface[0x50];
-        void *asVoidPtr[0x50];
-        const void *asConstVoidPtr[0x50];
-    } ptrData;
-#endif
-    /*0x1C8*/ u32 unused1;
-    /*0x1CC*/ const BehaviorScript *curBhvCommand;
-    /*0x1D0*/ u32 bhvStackIndex;
-    /*0x1D4*/ uintptr_t bhvStack[8];
-    /*0x1F4*/ s16 bhvDelayTimer;
-    /*0x1F6*/ s16 respawnInfoType;
-    /*0x1F8*/ f32 hitboxRadius;
-    /*0x1FC*/ f32 hitboxHeight;
-    /*0x200*/ f32 hurtboxRadius;
-    /*0x204*/ f32 hurtboxHeight;
-    /*0x208*/ f32 hitboxDownOffset;
-    /*0x20C*/ const BehaviorScript *behavior;
-    /*0x210*/ u32 unused2;
-    /*0x214*/ struct Object *platform;
-    /*0x218*/ void *collisionData;
-    /*0x21C*/ Mat4 transform;
-    /*0x25C*/ void *respawnInfo;
-};
+// struct Object {
+//     /*0x000*/ struct ObjectNode header;
+//     /*0x068*/ struct Object *parentObj;
+//     /*0x06C*/ struct Object *prevObj;
+//     /*0x070*/ u32 collidedObjInteractTypes;
+//     /*0x074*/ s16 activeFlags;
+//     /*0x076*/ s16 numCollidedObjs;
+//     /*0x078*/ struct Object *collidedObjs[4];
+//     /*0x088*/
+//     union {
+//         // Object fields. See object_fields.h.
+//         u32 asU32[0x50];
+//         s32 asS32[0x50];
+//         s16 asS16[0x50][2];
+//         f32 asF32[0x50];
+// #if !IS_64_BIT
+//         s16 *asS16P[0x50];
+//         s32 *asS32P[0x50];
+//         struct Animation **asAnims[0x50];
+//         struct Waypoint *asWaypoint[0x50];
+//         struct ChainSegment *asChainSegment[0x50];
+//         struct Object *asObject[0x50];
+//         struct Surface *asSurface[0x50];
+//         void *asVoidPtr[0x50];
+//         const void *asConstVoidPtr[0x50];
+// #endif
+//     } rawData;
+// #if IS_64_BIT
+//     union {
+//         s16 *asS16P[0x50];
+//         s32 *asS32P[0x50];
+//         struct Animation **asAnims[0x50];
+//         struct Waypoint *asWaypoint[0x50];
+//         struct ChainSegment *asChainSegment[0x50];
+//         struct Object *asObject[0x50];
+//         struct Surface *asSurface[0x50];
+//         void *asVoidPtr[0x50];
+//         const void *asConstVoidPtr[0x50];
+//     } ptrData;
+// #endif
+//     /*0x1C8*/ u32 unused1;
+//     /*0x1CC*/ const BehaviorScript *curBhvCommand;
+//     /*0x1D0*/ u32 bhvStackIndex;
+//     /*0x1D4*/ uintptr_t bhvStack[8];
+//     /*0x1F4*/ s16 bhvDelayTimer;
+//     /*0x1F6*/ s16 respawnInfoType;
+//     /*0x1F8*/ f32 hitboxRadius;
+//     /*0x1FC*/ f32 hitboxHeight;
+//     /*0x200*/ f32 hurtboxRadius;
+//     /*0x204*/ f32 hurtboxHeight;
+//     /*0x208*/ f32 hitboxDownOffset;
+//     /*0x20C*/ const BehaviorScript *behavior;
+//     /*0x210*/ u32 unused2;
+//     /*0x214*/ struct Object *platform;
+//     /*0x218*/ void *collisionData;
+//     /*0x21C*/ Mat4 transform;
+//     /*0x25C*/ void *respawnInfo;
+// };
 
 struct ObjectHitbox {
     /*0x00*/ u32 interactType;
